@@ -9,14 +9,32 @@
 import UIKit
 
 class TodoListViewController: UITableViewController {
-    var items = ["Find mike", "Buy eggs" , "Destroy demo"]
+    var items = [Item]()
     var userDefaults = UserDefaults.standard
-
+//    var  filepath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendPathComponent("Items.plist")
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        if  let  itemsarr = userDefaults.array(forKey: "TodoList") as? [String] {
-            items = itemsarr
+        let item1 = Item(title: "Find Mike")
+        let item2 = Item(title: "Buy Eggs")
+        let item3 = Item(title: "Do home works")
+        items.append(item1)
+        items.append(item2)
+        items.append(item3)
+        
+        
+//        if  let  itemsarr = userDefaults.array(forKey: "TodoList") as? [Item] {
+//            items = itemsarr
+//        }
+        if let data = UserDefaults.standard.data(forKey: "TodoList") {
+            do {
+                let decoder = JSONDecoder()
+                let itemsarr = try decoder.decode([Item].self, from: data)
+                items = itemsarr
+
+            } catch {
+                print("Unable to Decode Note (\(error))")
+            }
         }
         // Do any additional setup after loading the view.
     }
@@ -24,10 +42,10 @@ class TodoListViewController: UITableViewController {
         var uiTextField = UITextField()
         let alert = UIAlertController(title: "Add new todo", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add item", style: .default) { action in
-            self.items.append(uiTextField.text!)
-            self.userDefaults.set(self.items, forKey: "TodoList")
-            self.tableView.reloadData()
-         
+            let item = Item(title: uiTextField.text!)
+            self.items.append(item)
+            self.saveData()
+           
         }
         alert.addTextField { alertTextField in
             alertTextField.placeholder = "Created a new item"
@@ -43,18 +61,34 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath)
-        cell.textLabel?.text = items[indexPath.row]
+        cell.textLabel?.text = items[indexPath.row].title
+        
+        cell.accessoryType = items[indexPath.row].done ? .checkmark : .none
         return cell
     }
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        } else{
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
+        if items[indexPath.row].done {
+            items[indexPath.row].done = false
+        } else {
+            items[indexPath.row].done = true
         }
+        saveData()
         tableView.deselectRow(at: indexPath, animated: true)
+        
+        
+    }
+    
+    func saveData(){
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(items)
+            UserDefaults.standard.set(data, forKey: "TodoList")
+
+        } catch {
+            print("Unable to Encode Note (\(error))")
+        }
+        tableView.reloadData()
     }
 
 }
